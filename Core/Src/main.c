@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -93,12 +94,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   OLED_Init();
   OLED_Clear();
 
   HAL_ADCEx_Calibration_Start(&hadc1);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 4);
 
   OLED_ShowString(1, 1, "ADC_PA0 = ");
   OLED_ShowString(2, 1, "ADC_PA1 = ");
@@ -109,16 +112,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {
-    for (uint8_t i = 0; i<4; i++)
-    {
-      HAL_ADC_Start(&hadc1);
-      if (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) == HAL_OK) 
-      {
-        ADCValue[i] = HAL_ADC_GetValue(&hadc1);
-      }
-    }
-    
+  { 
     OLED_ShowNum(1, 11, ADCValue[0], 4);
     OLED_ShowNum(2, 11, ADCValue[1], 4);
     OLED_ShowNum(3, 11, ADCValue[2], 4);
@@ -179,7 +173,13 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+  if (hadc == &hadc1)
+  {
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ADCValue, 4);
+  }
+}
 /* USER CODE END 4 */
 
 /**
